@@ -26,144 +26,69 @@ git commit -m "initial commit"
 git push -u origin main
 ```
 
-Run build command:
+## Firs approach: Uploading `dist` folder to `gh-pages` branch
+
+We need to install `gh-pages` package to deploy our app:
 
 ```bash
-npm run build
+npm install gh-pages --save-dev
 ```
 
-Create a new branch called `gh-pages`.
-
-Remove all files except `dist` folder. And move `dist` folder's files to root path. We should have on root path:
-
-```
-|--assets/
-|--index.html
-
-```
-
-Upload files:
-
-```bash
-git add .
-git commit -m "upload files"
-git push -u origin gh-pages
-```
-
-> Check Github Actions tab to see the deployment process.
->
-> Check Github repository > Settings tab > Pages section.
-
-Now, we have deployed our website in: `https://<user-name>.github.io/<repository-name>`:
-
-![01-open-gh-pages-url](./readme-resources/01-open-gh-pages-url.png)
-
-> NOTE: We can change branch name on Settings tab > GitHub Pages section
-
-As we see, we have some errors when retrieving files:
-
-_https://<user-name>.github.io/assets/index-a824b72f.js net::ERR_ABORTED 404_
-
-This issue is related with the references to assets in the `index.html` file. We need to change the references to:
+Y ahora en el `package.json` añadimos un nuevo script:
 
 ```diff
-<!DOCTYPE html>
-
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <title>Cloud Module</title>
-
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
--   <script type="module" crossorigin src="/assets/index-CBHDhUW6.js"></script>
-+   <script type="module" crossorigin src="./assets/index-CBHDhUW6.js"></script>
-  </head>
-  <body>
-    <div id="root"></div>
-
-  </body>
-</html>
+"scripts": {
+  "start": "vite",
+  "build": "vite build",
++ "deploy": "gh-pages -d dist",
+  "preview": "vite preview",
++  "prebuild:dev": "npm run type-check",
++  "build:dev": "vite build --mode development",
+},
 ```
 
-> Due to Github Pages uses a subpath for the project, we need to add `./` to the references.
-
-Instead of doing manually, we will change the bunlder config. Checkout to main branch
-
-```bash
-git checkout main
-
-```
-
-Update config:
-
-_./vite.config.js_
-
-```diff
-...
-
-export default defineConfig({
-+ base: './',
-  envPrefix: 'PUBLIC_',
-  ...
-```
-
-> [Vite Public base path](https://vitejs.dev/guide/build.html#public-base-path)
-
-And configure `hash history` in the router:
-
-_./src/core/router/router.ts_
-
-```diff
-- import { createRouter } from '@tanstack/react-router';
-+ import { createRouter, createHashHistory } from '@tanstack/react-router';
-// The route-tree file is generated automatically. Do not modify this file manually.
-import { routeTree } from './route-tree';
-
-+ const history = createHashHistory();
-
-export const router = createRouter({
-  routeTree,
-+ history,
-});
-...
-
-```
+El comando `npm run deploy` se encargará de subir el contenido de la carpeta `dist` a la rama `gh-pages`.
 
 Run build command:
 
 ```bash
-npm install
-
-npm run build
-
+npm run build:dev
 ```
 
-Commit and push in `main` branch:
+Run deploy command:
 
 ```bash
-git add .
-git commit -m "update base path"
-git push
-
+npm run deploy
 ```
 
-Copy `dist` folder to `gh-pages` branch as above.
+And that is all, we have deployed our app to Github Pages.
 
-Commit and push in `gh-pages` branch:
+## Second approach: Github Actions
 
-```bash
-git add .
-git commit -m "update base path"
-git push
+We can also use Github Actions to automate the deployment process. We will create a new workflow file in `.github/workflows/cd.yml` with the following content:
+
+```yaml
+name: CD Workflow
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  cd:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Deploy
+        run: npm run deploy
 
 ```
-
-# About Basefactor + Lemoncode
-
-We are an innovating team of Javascript experts, passionate about turning your ideas into robust products.
-
-[Basefactor, consultancy by Lemoncode](http://www.basefactor.com) provides consultancy and coaching services.
-
-[Lemoncode](http://lemoncode.net/services/en/#en-home) provides training services.
-
-For the LATAM/Spanish audience we are running an Online Front End Master degree, more info: http://lemoncode.net/master-frontend
